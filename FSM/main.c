@@ -108,5 +108,5 @@ void fn_red(void){
 void fn_blue(void){
 	blue_on();
 	check_s2();
-	cur_state = ST_BLUE;
+	cur_state = ST_GREEN;
 }
