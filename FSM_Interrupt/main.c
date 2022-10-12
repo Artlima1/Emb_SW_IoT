@@ -84,15 +84,18 @@ void main(void)
 }
 
 void green_on(){
-	P1->OUT &= GREEN_LED;
+    P2->OUT &= ~(GREEN_LED | RED_LED | BLUE_LED);
+    P2->OUT |= GREEN_LED;
 }
 
 void red_on(){
-	P1->OUT &= RED_LED;
+    P2->OUT &= ~(GREEN_LED | RED_LED | BLUE_LED);
+    P2->OUT |= RED_LED;
 }
 
 void blue_on(){
-	P1->OUT &= BLUE_LED;
+    P2->OUT &= ~(GREEN_LED | RED_LED | BLUE_LED);
+    P2->OUT |= BLUE_LED;
 }
 
 void fn_init(void){

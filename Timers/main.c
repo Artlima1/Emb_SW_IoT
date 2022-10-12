@@ -39,5 +39,5 @@ void main(void)
 void TA0_0_IRQHandler(void){
 	TIMER_A0->CCTL[0] &= ~TIMER_A_CCTLN_CCIFG; // clear interrupt
 
-	P1->OUT ^= BIT0;
+	P2->OUT ^= BIT1;
 }
