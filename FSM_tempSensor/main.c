@@ -34,6 +34,29 @@
 
 #define TIMER_PERIOD    0xB718 // 1s
 
+typedef enum {
+    ST_RED,
+	ST_GREEN,
+	ST_BLUE,
+	NUM_OF_STATES,
+} State_t;
+
+typedef struct {
+	State_t state;
+	void (*func)(void);
+} StateMachine_t;
+
+void fn_green(void);
+void fn_red(void);
+void fn_blue(void);
+
+State_t cur_state = ST_RED;
+StateMachine_t StateMachine[] = {
+	{ST_RED, fn_red},
+	{ST_GREEN, fn_green},
+	{ST_BLUE, fn_blue}
+};
+
 uint32_t cal30;
 uint32_t cal85;
 float calDifference;
@@ -83,16 +106,17 @@ void cfg_interrupts(void) {
     Interrupt_enableInterrupt(INT_TA1_0); /* Timer */
     Interrupt_enableInterrupt(INT_ADC14); /* ADC */
 
-    Interrupt_enableSleepOnIsrExit();
     Interrupt_enableMaster();
 }
 
 void cfg_gpio(void) {
     GPIO_setAsOutputPin(GPIO_PORT_P2, GPIO_PIN0);
     GPIO_setAsOutputPin(GPIO_PORT_P2, GPIO_PIN1);
+    GPIO_setAsOutputPin(GPIO_PORT_P2, GPIO_PIN2);
 
     GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN0);
-    GPIO_setOutputHighOnPin(GPIO_PORT_P2, GPIO_PIN1);
+    GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN1);
+    GPIO_setOutputHighOnPin(GPIO_PORT_P2, GPIO_PIN2);
 }
 
 void init(void) {
@@ -110,6 +134,12 @@ int main(void) {
     /* Sleeping when not in use */
     while (1) {
         PCM_gotoLPM0();
+        if(cur_state < NUM_OF_STATES){
+			(*StateMachine[cur_state].func)();
+		}
+		else{
+			// error 
+		}
     }
 }
 
@@ -119,8 +149,46 @@ void read_temperature(void){
 	temperature = (conRes / calDifference) + 30.0f;
 }
 
+void green_on(){
+    GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN0);
+    GPIO_setOutputHighOnPin(GPIO_PORT_P2, GPIO_PIN1);
+    GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN2);
+}
+
+void red_on(){
+    GPIO_setOutputHighOnPin(GPIO_PORT_P2, GPIO_PIN0);
+    GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN1);
+    GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN2);
+}
+
+void blue_on(){
+    GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN0);
+    GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN1);
+    GPIO_setOutputHighOnPin(GPIO_PORT_P2, GPIO_PIN2);
+}
+
+void fn_green(void){
+    if(!(temperature >= 20.0 && temperature <= 25.0)){
+        red_on();
+        cur_state = ST_RED;
+    }
+}
+
+void fn_red(void){
+    if(!(temperature >= 25.0)){
+        blue_on();
+        cur_state = ST_BLUE;
+    }
+}
+
+void fn_blue(void){
+    if(!(temperature <= 20)){
+        green_on();
+        cur_state = ST_GREEN;
+    }
+}
+
 void TA1_0_IRQHandler(void) {
-    GPIO_toggleOutputOnPin(GPIO_PORT_P2, GPIO_PIN0);
     ADC14_toggleConversionTrigger();
     Timer_A_clearCaptureCompareInterrupt(TIMER_A1_BASE, TIMER_A_CAPTURECOMPARE_REGISTER_0);
 }
@@ -132,7 +200,6 @@ void ADC14_IRQHandler(void) {
     ADC14_clearInterruptFlag(status);
 
     if(status & ADC_INT0){
-        GPIO_toggleOutputOnPin(GPIO_PORT_P2, GPIO_PIN1);
         read_temperature();
     }
 
