@@ -7,3 +7,5 @@
 /simplelink_msp432p4_sdk_3_40_01_02
 /include_paths_drv_lib
 /basics/.project
+/drv_lib/.project
+/.vscode
