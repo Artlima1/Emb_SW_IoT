@@ -32,7 +32,15 @@
 
 #include <ti/devices/msp432p4xx/driverlib/driverlib.h>
 
+/* ------------------- Macros ---------------------------- */
+
 #define TIMER_PERIOD    0xB718 // 1s
+#define RED_LED GPIO_PIN0
+#define GREEN_LED GPIO_PIN1
+#define BLUE_LED GPIO_PIN2
+#define LEDS_PORT GPIO_PORT_P2
+
+/* ------------------- Configuration of FSM ---------------------------- */
 
 typedef enum {
     ST_RED,
@@ -57,11 +65,15 @@ StateMachine_t StateMachine[] = {
 	{ST_BLUE, fn_blue}
 };
 
+/* ------------------- Temperature Variables ---------------------------- */
+
 uint32_t cal30;
 uint32_t cal85;
 float calDifference;
 
 float temperature;
+
+/* ------------------- Initialization of elements ---------------------------- */
 
 void cfg_sensor(void){
 	REF_A_enableTempSensor();
@@ -110,14 +122,16 @@ void cfg_interrupts(void) {
 }
 
 void cfg_gpio(void) {
-    GPIO_setAsOutputPin(GPIO_PORT_P2, GPIO_PIN0);
-    GPIO_setAsOutputPin(GPIO_PORT_P2, GPIO_PIN1);
-    GPIO_setAsOutputPin(GPIO_PORT_P2, GPIO_PIN2);
+    GPIO_setAsOutputPin(LEDS_PORT, RED_LED);
+    GPIO_setAsOutputPin(LEDS_PORT, GREEN_LED);
+    GPIO_setAsOutputPin(LEDS_PORT, BLUE_LED);
 
-    GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN0);
-    GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN1);
-    GPIO_setOutputHighOnPin(GPIO_PORT_P2, GPIO_PIN2);
+    GPIO_setOutputLowOnPin(LEDS_PORT, RED_LED);
+    GPIO_setOutputLowOnPin(LEDS_PORT, GREEN_LED);
+    GPIO_setOutputHighOnPin(LEDS_PORT, BLUE_LED);
 }
+
+/* ------------------- Main Program ---------------------------- */
 
 void init(void) {
     WDT_A_holdTimer();
@@ -134,14 +148,16 @@ int main(void) {
     /* Sleeping when not in use */
     while (1) {
         PCM_gotoLPM0();
-        if(cur_state < NUM_OF_STATES){
+        if(cur_state < NUM_OF_STATES) {
 			(*StateMachine[cur_state].func)();
 		}
-		else{
+		else {
 			// error 
 		}
     }
 }
+
+/* ------------------- Helper Functions ---------------------------- */
 
 void read_temperature(void){
 	int16_t conRes;
@@ -150,22 +166,24 @@ void read_temperature(void){
 }
 
 void green_on(){
-    GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN0);
-    GPIO_setOutputHighOnPin(GPIO_PORT_P2, GPIO_PIN1);
-    GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN2);
+    GPIO_setOutputLowOnPin(LEDS_PORT, GPIO_PIN0);
+    GPIO_setOutputHighOnPin(LEDS_PORT, GPIO_PIN1);
+    GPIO_setOutputLowOnPin(LEDS_PORT, GPIO_PIN2);
 }
 
 void red_on(){
-    GPIO_setOutputHighOnPin(GPIO_PORT_P2, GPIO_PIN0);
-    GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN1);
-    GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN2);
+    GPIO_setOutputHighOnPin(LEDS_PORT, GPIO_PIN0);
+    GPIO_setOutputLowOnPin(LEDS_PORT, GPIO_PIN1);
+    GPIO_setOutputLowOnPin(LEDS_PORT, GPIO_PIN2);
 }
 
 void blue_on(){
-    GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN0);
-    GPIO_setOutputLowOnPin(GPIO_PORT_P2, GPIO_PIN1);
-    GPIO_setOutputHighOnPin(GPIO_PORT_P2, GPIO_PIN2);
+    GPIO_setOutputLowOnPin(LEDS_PORT, GPIO_PIN0);
+    GPIO_setOutputLowOnPin(LEDS_PORT, GPIO_PIN1);
+    GPIO_setOutputHighOnPin(LEDS_PORT, GPIO_PIN2);
 }
+
+/* ------------------- FSM definitions ---------------------------- */
 
 void fn_green(void){
     if(!(temperature >= 20.0 && temperature <= 25.0)){
@@ -187,6 +205,8 @@ void fn_blue(void){
         cur_state = ST_GREEN;
     }
 }
+
+/* ------------------- Interrupt handlers ---------------------------- */
 
 void TA1_0_IRQHandler(void) {
     ADC14_toggleConversionTrigger();
